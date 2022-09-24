@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/avast/retry-go/v4"
 	"reflect"
 	"strings"
 	"time"
@@ -151,8 +152,16 @@ func (r *River) syncLoop() {
 		}
 
 		if needFlush {
-			// TODO: retry some times?
-			if err := r.doBulk(reqs); err != nil {
+			err := retry.Do(
+				func() error {
+					err := r.doBulk(reqs)
+					if err != nil {
+						return err
+					}
+					return nil
+				},
+			)
+			if err != nil {
 				log.Errorf("do ES bulk err %v, close sync", err)
 				r.cancel()
 				return
