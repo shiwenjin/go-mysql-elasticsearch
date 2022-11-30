@@ -1,14 +1,33 @@
-FROM golang:alpine
+FROM golang:1.18-alpine as builder
 
-MAINTAINER siddontang
+WORKDIR /app
 
-RUN apk add --no-cache tini mariadb-client
+ENV GOPROXY=https://goproxy.cn
 
-ADD . /go/src/github.com/siddontang/go-mysql-elasticsearch
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apk/repositories
 
-RUN apk add --no-cache mariadb-client
-RUN cd /go/src/github.com/siddontang/go-mysql-elasticsearch/ && \
-    go build -o bin/go-mysql-elasticsearch ./cmd/go-mysql-elasticsearch && \
-    cp -f ./bin/go-mysql-elasticsearch /go/bin/go-mysql-elasticsearch
+RUN apk update --no-cache && apk add --no-cache tzdata upx
 
-ENTRYPOINT ["/sbin/tini","--","go-mysql-elasticsearch"]
+COPY ./go.mod ./
+COPY ./go.sum ./
+
+RUN go mod download
+
+COPY . .
+
+RUN CGO_ENABLED=0 go build -ldflags "-s -w" -o server &&\
+  upx -1 server -o _upx_server && \
+  mv -f _upx_server server
+
+
+FROM alpine as runner
+WORKDIR /app
+
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apk/repositories
+
+RUN apk update --no-cache && apk add --no-cache  mariadb-client
+
+COPY --from=builder /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
+COPY --from=builder /app/server /app/
+CMD ["/app/server"]
+

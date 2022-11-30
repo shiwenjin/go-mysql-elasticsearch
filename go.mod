@@ -7,6 +7,7 @@ go 1.12
 
 require (
 	github.com/BurntSushi/toml v1.2.0
+	github.com/avast/retry-go/v4 v4.1.0 // indirect
 	github.com/go-mysql-org/go-mysql v1.6.0
 	github.com/juju/errors v1.0.0
 	github.com/pingcap/check v0.0.0-20211026125417-57bd13f7b5f0
