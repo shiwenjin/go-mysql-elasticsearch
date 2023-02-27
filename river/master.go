@@ -74,6 +74,11 @@ func (m *masterInfo) Save(pos mysql.Position) error {
 
 	e.Encode(m)
 
+	if m.Name == "" {
+		log.Warnf("missing bin_name %s", buf.String())
+		return nil
+	}
+
 	var err error
 	if err = ioutil2.WriteFileAtomic(m.filePath, buf.Bytes(), 0644); err != nil {
 		log.Errorf("canal save master info to file %s err %v", m.filePath, err)
